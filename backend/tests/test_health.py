@@ -31,4 +31,3 @@ def test_health_is_degraded_when_worker_is_offline(monkeypatch) -> None:
 
     assert payload["status"] == "degraded"
     assert payload["worker"]["status"] == "offline"
-
