@@ -1,6 +1,6 @@
 # CropsSecurity
 
-Plataforma modular para organizar e executar ferramentas autorizadas de segurança. A Sprint 1 entrega a fundação: interface web, API, worker, persistência local e ambiente Docker reproduzível.
+Plataforma modular para organizar e executar ferramentas autorizadas de segurança. A versão 0.2 integra a primeira ferramenta operacional à fundação Docker: o Detector de Dados Sensíveis para aplicações web.
 
 ## Início rápido
 
@@ -29,6 +29,21 @@ Os dados do SQLite e do Redis permanecem em volumes nomeados. `docker compose do
 
 Consulte [docs/getting-started.md](docs/getting-started.md), [docs/architecture/README.md](docs/architecture/README.md) e [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Primeira ferramenta
+
+Em **Web → Exposição de Informações**, o Detector de Dados Sensíveis percorre páginas e recursos textuais autorizados para procurar segredos, credenciais, dados pessoais, arquivos sensíveis e indicadores personalizados.
+
+- execução assíncrona pelo worker;
+- controle de domínio, profundidade, quantidade e tamanho dos recursos;
+- cancelamento e progresso persistidos;
+- validação de CPF, CNPJ e cartão para reduzir falsos positivos;
+- valores sensíveis mascarados antes da persistência e exibição;
+- resultados organizados por severidade e confiança.
+
+Consulte [docs/modules/sensitive-data-finder.md](docs/modules/sensitive-data-finder.md) para parâmetros, limites e comportamento esperado.
+
 ## Estado
 
-Sprint 1: fundação. Ainda não existem scanners, autenticação nem execução de trabalhos de pentest.
+- Sprint 1: fundação concluída.
+- Sprint 2: primeiro módulo operacional implementado.
+- Antes de liberar acesso pela rede, ainda será necessário implementar autenticação e autorização de usuários.

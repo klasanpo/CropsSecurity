@@ -34,4 +34,3 @@ def worker_is_ready() -> bool:
         return redis_client().exists("cropssecurity:worker:heartbeat") == 1
     except Exception:
         return False
-
