@@ -17,7 +17,7 @@ Todo módulo deve:
 - respeitar escopo autorizado;
 - oferecer progresso e cancelamento cooperativo;
 - devolver achados estruturados com severidade e confiança;
-- mascarar valores sensíveis antes de persistir;
+- preservar integralmente o trecho e o valor encontrados antes de persistir;
 - possuir testes de regressão, inclusive contra falsos positivos conhecidos.
 
 ## Consequências

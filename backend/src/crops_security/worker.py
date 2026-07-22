@@ -42,6 +42,7 @@ def execute_scan(scan_id: str) -> None:
         include_external=parameters["include_external"],
         verify_tls=parameters["verify_tls"],
         custom_words=tuple(parameters.get("custom_words", [])),
+        context_chars=parameters.get("context_chars", 1500),
     )
     update_scan(
         scan_id,
@@ -61,6 +62,7 @@ def execute_scan(scan_id: str) -> None:
             cancelled=lambda: scan_cancelled(scan_id) or stop.is_set(),
         )
         if scan_cancelled(scan_id) or stop.is_set():
+            save_findings(scan_id, outcome.findings)
             update_scan(
                 scan_id,
                 status="cancelled",

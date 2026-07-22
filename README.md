@@ -35,10 +35,20 @@ Em **Web → Exposição de Informações**, o Detector de Dados Sensíveis perc
 
 - execução assíncrona pelo worker;
 - controle de domínio, profundidade, quantidade e tamanho dos recursos;
+- navegação por rotas sem extensão e resolução correta da URL final após redirecionamentos;
+- classificação pelo `Content-Type`, sem contabilizar binários como recursos analisados;
 - cancelamento e progresso persistidos;
 - validação de CPF, CNPJ e cartão para reduzir falsos positivos;
-- valores sensíveis mascarados antes da persistência e exibição;
-- resultados organizados por severidade e confiança.
+- evidências preservadas integralmente no SQLite, na interface e nas exportações;
+- resultados organizados por severidade e confiança;
+- regras reforçadas contra falsos positivos de variáveis de ambiente e templates;
+- análise de escopos com múltiplos alvos por colagem ou arquivo TXT;
+- filtros e exportações em HTML, CSV e JSON;
+- comparação entre teste e reteste;
+- seletor de execução com resultados em largura total;
+- contexto expansível com o valor original encontrado destacado em vermelho;
+- exclusão permanente de execuções finalizadas e seus achados relacionados;
+- preservação dos achados parciais quando uma execução é cancelada.
 
 Consulte [docs/modules/sensitive-data-finder.md](docs/modules/sensitive-data-finder.md) para parâmetros, limites e comportamento esperado.
 

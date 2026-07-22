@@ -42,7 +42,8 @@ def initialize_database() -> None:
             created_at TEXT NOT NULL,
             started_at TEXT,
             finished_at TEXT,
-            cancel_requested INTEGER NOT NULL DEFAULT 0
+            cancel_requested INTEGER NOT NULL DEFAULT 0,
+            batch_id TEXT
         )""",
         """CREATE TABLE IF NOT EXISTS findings (
             id TEXT PRIMARY KEY,
@@ -62,8 +63,14 @@ def initialize_database() -> None:
         "CREATE INDEX IF NOT EXISTS scan_runs_created_at_idx ON scan_runs(created_at DESC)",
         "CREATE INDEX IF NOT EXISTS findings_scan_id_idx ON findings(scan_id)",
         "CREATE INDEX IF NOT EXISTS findings_severity_idx ON findings(severity)",
+        "CREATE INDEX IF NOT EXISTS scan_runs_batch_id_idx ON scan_runs(batch_id)",
     )
     with engine.begin() as connection:
+        columns = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(scan_runs)")).fetchall()
+        }
+        if columns and "batch_id" not in columns:
+            connection.execute(text("ALTER TABLE scan_runs ADD COLUMN batch_id TEXT"))
         for statement in statements:
             connection.execute(text(statement))
         connection.execute(
@@ -86,16 +93,22 @@ def database_is_ready() -> bool:
         return False
 
 
-def create_scan(module_id: str, target: str, parameters: dict[str, Any]) -> dict[str, Any]:
+def create_scan(
+    module_id: str,
+    target: str,
+    parameters: dict[str, Any],
+    batch_id: str | None = None,
+) -> dict[str, Any]:
     scan_id = str(uuid4())
     created_at = now_iso()
     with engine.begin() as connection:
         connection.execute(
             text(
                 """INSERT INTO scan_runs
-                (id, module_id, target, status, progress, phase, parameters_json, created_at)
+                (id, module_id, target, status, progress, phase, parameters_json, created_at,
+                 batch_id)
                 VALUES (:id, :module_id, :target, 'queued', 0,
-                        'Aguardando worker', :parameters, :created_at)"""
+                        'Aguardando worker', :parameters, :created_at, :batch_id)"""
             ),
             {
                 "id": scan_id,
@@ -103,6 +116,7 @@ def create_scan(module_id: str, target: str, parameters: dict[str, Any]) -> dict
                 "target": target,
                 "parameters": json.dumps(parameters, ensure_ascii=False),
                 "created_at": created_at,
+                "batch_id": batch_id,
             },
         )
     return get_scan(scan_id) or {}
@@ -173,16 +187,33 @@ def save_findings(scan_id: str, findings: tuple[Finding, ...]) -> None:
         )
 
 
-def list_findings(scan_id: str) -> list[dict[str, Any]]:
+def list_findings(
+    scan_id: str,
+    severity: str | None = None,
+    indicator: str | None = None,
+    search: str | None = None,
+) -> list[dict[str, Any]]:
+    clauses = ["scan_id = :scan_id"]
+    parameters: dict[str, Any] = {"scan_id": scan_id}
+    if severity:
+        clauses.append("severity = :severity")
+        parameters["severity"] = severity
+    if indicator:
+        clauses.append("indicator = :indicator")
+        parameters["indicator"] = indicator
+    if search:
+        clauses.append("(indicator LIKE :search OR category LIKE :search OR url LIKE :search)")
+        parameters["search"] = f"%{search}%"
+    where = " AND ".join(clauses)
     with engine.connect() as connection:
         rows = (
             connection.execute(
                 text(
-                    """SELECT * FROM findings WHERE scan_id = :scan_id
+                    f"""SELECT * FROM findings WHERE {where}
                 ORDER BY CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1
-                WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END, url, line"""
+                WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END, url, line"""  # noqa: S608
                 ),
-                {"scan_id": scan_id},
+                parameters,
             )
             .mappings()
             .all()
@@ -201,3 +232,16 @@ def request_scan_cancel(scan_id: str) -> bool:
 def scan_cancelled(scan_id: str) -> bool:
     scan = get_scan(scan_id)
     return bool(scan and scan["cancel_requested"])
+
+
+def delete_scan(scan_id: str) -> bool:
+    """Delete a finished execution and all findings in one transaction."""
+    with engine.begin() as connection:
+        row = connection.execute(
+            text("SELECT status FROM scan_runs WHERE id = :id"), {"id": scan_id}
+        ).first()
+        if not row or row[0] in {"queued", "running"}:
+            return False
+        connection.execute(text("DELETE FROM findings WHERE scan_id = :id"), {"id": scan_id})
+        result = connection.execute(text("DELETE FROM scan_runs WHERE id = :id"), {"id": scan_id})
+    return result.rowcount == 1

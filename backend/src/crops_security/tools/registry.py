@@ -29,9 +29,15 @@ SENSITIVE_DATA_FINDER = ModuleManifest(
         "em páginas e recursos textuais autorizados."
     ),
     impact="Baixo",
-    version="1.0.0",
+    version="1.3.0",
     status="available",
-    capabilities=("Segredos", "Dados pessoais", "Arquivos sensíveis", "Crawler controlado"),
+    capabilities=(
+        "Segredos",
+        "Dados pessoais",
+        "Arquivos sensíveis",
+        "Escopos com múltiplos alvos",
+        "Exportação e reteste",
+    ),
 )
 
 MODULES = {SENSITIVE_DATA_FINDER.id: SENSITIVE_DATA_FINDER}
